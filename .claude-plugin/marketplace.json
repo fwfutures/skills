@@ -1,5 +1,5 @@
 {
-  "name": "fwf-skills",
+  "name": "fwf-claude-marketplace",
   "owner": {
     "name": "Freshwater Futures"
   },
@@ -9,7 +9,7 @@
   },
   "plugins": [
     {
-      "name": "fwf-skills",
+      "name": "fwf-public-skills",
       "description": "Public agent skills from Freshwater Futures",
       "source": "./",
       "strict": false,
