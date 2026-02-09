@@ -1,6 +1,8 @@
 {
   "name": "fwf-skills",
-  "owner": { "name": "Freshwater Futures" },
+  "owner": {
+    "name": "Freshwater Futures"
+  },
   "metadata": {
     "description": "Public agent skills collection",
     "version": "1.0.0"
@@ -8,6 +10,7 @@
   "plugins": [
     {
       "name": "fwf-skills",
+      "description": "Public agent skills from Freshwater Futures",
       "source": "./",
       "strict": false,
       "skills": [
