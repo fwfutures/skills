@@ -66,6 +66,19 @@ node "$OFFICE_CLI" status
 node "$NOTION_CLI" status
 ```
 
+### Agent-assisted verification handoff
+
+When the agent runs `login` or `request`, the CLI may print a verification URL and code for human approval.
+
+1. Agent runs the auth command and captures the exact verification output.
+2. Agent sends the verification URL and code to the user (do not paraphrase).
+3. Prefer sharing the prefilled URL format:
+   `https://auth.freshhub.ai/agent/verify?code=<CODE>`
+4. User opens the URL, confirms the code, clicks `Verify Code`, then manually clicks `Approve` on the next screen.
+5. Agent waits for approval polling to complete, then continues with the requested task.
+
+If approval fails, repeat the flow and confirm the user is signed into the intended Fresh Auth account before entering the code.
+
 ## Command map: Office CLI
 
 ## Drive / Graph storage
