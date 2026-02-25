@@ -11,12 +11,15 @@ const AUTH_SERVICE_URL = RAW_AUTH_SERVICE_URL.replace(/\/+$/, "").replace(
 );
 const API_BASE = `${AUTH_SERVICE_URL}/proxy/msgraph`;
 const STATUS_BASE = `${AUTH_SERVICE_URL}/api/proxy/status`;
-const AGENT_SESSION_FILE = join(
+const SHARED_AGENT_SESSION_FILE = process.env.FRESH_AUTH_AGENT_SESSION_FILE || join(
   homedir(),
   ".config",
-  "office-cli",
+  "fresh-auth",
   "agent-session"
 );
+const LEGACY_AGENT_SESSION_FILES = [
+  join(homedir(), ".config", "office-cli", "agent-session")
+];
 const AUTO_REQUEST_POLL_MS = 2e3;
 const AUTO_REQUEST_ENABLED = process.env.OFFICE_AUTO_REQUEST !== "0";
 const SCOPES = {
@@ -30,30 +33,36 @@ const GRANT_DURATION = {
   cal: "1h"
 };
 async function getAgentSession() {
+  const candidates = [SHARED_AGENT_SESSION_FILE, ...LEGACY_AGENT_SESSION_FILES];
   try {
-    if (!existsSync(AGENT_SESSION_FILE)) return null;
-    const sessionRaw = (await readFile(AGENT_SESSION_FILE, "utf-8")).trim();
-    if (!sessionRaw) return null;
-    try {
-      const parsed = JSON.parse(sessionRaw);
-      const normalized = parsed.agentSessionId || parsed.agentSession || parsed.session;
-      return normalized?.trim() || null;
-    } catch {
-      return sessionRaw;
+    for (const sessionFile of candidates) {
+      if (!existsSync(sessionFile)) continue;
+      const sessionRaw = (await readFile(sessionFile, "utf-8")).trim();
+      if (!sessionRaw) continue;
+      try {
+        const parsed = JSON.parse(sessionRaw);
+        const normalized = parsed.agentSessionId || parsed.agentSession || parsed.session;
+        if (normalized?.trim()) return normalized.trim();
+      } catch {
+        return sessionRaw;
+      }
     }
+    return null;
   } catch {
     return null;
   }
 }
 async function saveAgentSession(agentSessionId) {
-  const dir = dirname(AGENT_SESSION_FILE);
+  const dir = dirname(SHARED_AGENT_SESSION_FILE);
   await mkdir(dir, { recursive: true });
-  await writeFile(AGENT_SESSION_FILE, `${agentSessionId.trim()}\n`, { mode: 384 });
+  await writeFile(SHARED_AGENT_SESSION_FILE, `${agentSessionId.trim()}\n`, { mode: 384 });
 }
 async function clearAgentSession() {
   try {
-    if (existsSync(AGENT_SESSION_FILE)) {
-      await unlink(AGENT_SESSION_FILE);
+    for (const sessionFile of [SHARED_AGENT_SESSION_FILE, ...LEGACY_AGENT_SESSION_FILES]) {
+      if (existsSync(sessionFile)) {
+        await unlink(sessionFile);
+      }
     }
   } catch {
   }
@@ -1334,6 +1343,10 @@ async function doLogin(agentName) {
     );
   }
   const data = await response.json();
+  if (data.agentSessionId?.trim()) {
+    await saveAgentSession(data.agentSessionId);
+    console.log("Agent session saved (pending approval).");
+  }
   console.log("Agent registration started.");
   console.log(`Code: ${data.code}`);
   const verifyUrl = data.verifyUrl || buildRegistrationUrl(data.code);
@@ -1345,8 +1358,10 @@ async function doLogin(agentName) {
     const poll = await fetch(data.pollUrl);
     if (!poll.ok) throw new Error(`Registration poll failed: ${await poll.text()}`);
     const status = await poll.json();
-    if (status.status === "approved" && status.agentSessionId) {
+    if (status.agentSessionId?.trim()) {
       await saveAgentSession(status.agentSessionId);
+    }
+    if (status.status === "approved" && status.agentSessionId) {
       console.log("Agent session saved.");
       console.log("Next: run './office-cli.js request <drive|mail|cal>' to request access.");
       break;
