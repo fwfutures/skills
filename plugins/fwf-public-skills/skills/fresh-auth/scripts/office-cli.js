@@ -1314,7 +1314,7 @@ async function checkStatus(service) {
   }
 }
 async function doLogin(agentName) {
-  const name = agentName || "Office CLI";
+  const name = agentName || "Fresh Auth CLI";
   const deviceInfo = `${hostname()} (${process.platform})`;
   const response = await fetch(`${AUTH_SERVICE_URL}/api/agent/init`, {
     method: "POST",

@@ -46,7 +46,7 @@ const NOTION_STATUS_URL = `${AUTH_SERVICE_URL}/api/proxy/status/notion`;
 const AGENT_SESSION_FILE = join(
   homedir(),
   ".config",
-  "notion-cli",
+  "office-cli",
   "agent-session"
 );
 const AUTO_REQUEST_POLL_MS = 2000;
@@ -425,7 +425,7 @@ async function cmdLogin() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      agentName: "Notion CLI",
+      agentName: "Fresh Auth CLI",
       deviceInfo: `notion-query.js ${process.platform} ${process.arch} ${hostname()}`,
     }),
   });
