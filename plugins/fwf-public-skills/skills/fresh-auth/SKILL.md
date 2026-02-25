@@ -18,18 +18,16 @@ Use this skill as the single entry point for secure, identity-aware access to Mi
 
 ## Security model
 
-- Use the Auth Service Proxy at `https://auth.freshhub.ai` for Microsoft Graph actions.
-- Use `office-cli` with agent-session grants, never raw OAuth tokens.
+- Use the Auth Service Proxy at `https://auth.freshhub.ai` for Microsoft Graph and Notion actions.
+- Use agent-session grants and OAuth approvals, never raw provider tokens.
 - Keep `~/.config/office-cli/agent-session` at secure mode (600).
 - Store secrets in environment variables.
-- Use `NOTION_API_KEY` for Notion API requests.
 - Use `OPENROUTER_API_KEY` for Office PDF/image conversion.
 - Use `AUTH_SERVICE_URL` only when overriding the default proxy endpoint.
 
 ## Runtime prerequisites
 
-- Install Bun for `scripts/office-cli.ts`.
-- Install `jq` and `curl` for `scripts/notion-query.sh`.
+- Install Node.js (18+) for `scripts/office-cli.js` and `scripts/notion-query.js`.
 - Run commands from this skill folder or export explicit paths.
 
 ```bash
@@ -37,19 +35,19 @@ Use this skill as the single entry point for secure, identity-aware access to Mi
 export FRESH_AUTH_DIR="${HOME}/.agents/skills/fresh-auth"
 [ -d "$FRESH_AUTH_DIR" ] || export FRESH_AUTH_DIR="${HOME}/.codex/skills/fresh-auth"
 
-export OFFICE_CLI="${FRESH_AUTH_DIR}/scripts/office-cli.ts"
-export NOTION_CLI="${FRESH_AUTH_DIR}/scripts/notion-query.sh"
+export OFFICE_CLI="${FRESH_AUTH_DIR}/scripts/office-cli.js"
+export NOTION_CLI="${FRESH_AUTH_DIR}/scripts/notion-query.js"
 export AUTH_SERVICE_URL="https://auth.freshhub.ai"
 
 # Quick command discovery
-[ -f "$OFFICE_CLI" ] && bun "$OFFICE_CLI" status
-[ -x "$NOTION_CLI" ] && "$NOTION_CLI" me
+[ -f "$OFFICE_CLI" ] && node "$OFFICE_CLI" status
+[ -f "$NOTION_CLI" ] && node "$NOTION_CLI" status
 ```
 
 ## Bundled scripts
 
-- `scripts/office-cli.ts` for Microsoft Graph-backed Drive, Mail, Calendar, and People actions.
-- `scripts/notion-query.sh` for direct Notion API read/write workflows.
+- `scripts/office-cli.js` for Microsoft Graph-backed Drive, Mail, Calendar, and People actions.
+- `scripts/notion-query.js` for Notion read/write workflows through auth service proxy.
 
 ## Office + Graph: canonical flow
 
@@ -57,13 +55,15 @@ Follow this flow when granting access for Graph-backed tools.
 
 ```bash
 # Register and create grants
-bun "$OFFICE_CLI" login
-bun "$OFFICE_CLI" request drive
-bun "$OFFICE_CLI" request mail
-bun "$OFFICE_CLI" request cal
+node "$OFFICE_CLI" login
+node "$OFFICE_CLI" request drive
+node "$OFFICE_CLI" request mail
+node "$OFFICE_CLI" request cal
+node "$NOTION_CLI" request
 
 # Verify active grants
-bun "$OFFICE_CLI" status
+node "$OFFICE_CLI" status
+node "$NOTION_CLI" status
 ```
 
 ## Command map: Office CLI
@@ -71,62 +71,65 @@ bun "$OFFICE_CLI" status
 ## Drive / Graph storage
 
 ```bash
-bun "$OFFICE_CLI" drive list
-bun "$OFFICE_CLI" drive list "/Documents"
-bun "$OFFICE_CLI" drive search "Quarterly report"
-bun "$OFFICE_CLI" drive download <file-id> out.docx
-bun "$OFFICE_CLI" drive content <file-id>
-bun "$OFFICE_CLI" drive convert <file-id> --output=notes.md
-bun "$OFFICE_CLI" drive share <file-id> --type edit
-bun "$OFFICE_CLI" drive share <file-id> --anyone
-bun "$OFFICE_CLI" drive permissions <file-id>
-bun "$OFFICE_CLI" drive unshare <file-id> <permission-id>
+node "$OFFICE_CLI" drive list
+node "$OFFICE_CLI" drive list "/Documents"
+node "$OFFICE_CLI" drive search "Quarterly report"
+node "$OFFICE_CLI" drive download <file-id> out.docx
+node "$OFFICE_CLI" drive content <file-id>
+node "$OFFICE_CLI" drive convert <file-id> --output=notes.md
+node "$OFFICE_CLI" drive share <file-id> --type edit
+node "$OFFICE_CLI" drive share <file-id> --anyone
+node "$OFFICE_CLI" drive permissions <file-id>
+node "$OFFICE_CLI" drive unshare <file-id> <permission-id>
 ```
 
 ## Mail / Email
 
 ```bash
-bun "$OFFICE_CLI" mail inbox
-bun "$OFFICE_CLI" mail inbox --count 50
-bun "$OFFICE_CLI" mail unread
-bun "$OFFICE_CLI" mail search "team update"
-bun "$OFFICE_CLI" mail read <message-id>
-bun "$OFFICE_CLI" mail send --to "teammate@example.com" --subject "Brief" --body "Thanks for the update"
-bun "$OFFICE_CLI" mail send --to "brad" --subject "Quick check" --body "Approved" --yes
-bun "$OFFICE_CLI" mail reply <message-id> --body "Got it."
-bun "$OFFICE_CLI" mail reply-all <message-id> --body "Thanks everyone."
+node "$OFFICE_CLI" mail inbox
+node "$OFFICE_CLI" mail inbox --count 50
+node "$OFFICE_CLI" mail unread
+node "$OFFICE_CLI" mail search "team update"
+node "$OFFICE_CLI" mail read <message-id>
+node "$OFFICE_CLI" mail send --to "teammate@example.com" --subject "Brief" --body "Thanks for the update"
+node "$OFFICE_CLI" mail send --to "brad" --subject "Quick check" --body "Approved" --yes
+node "$OFFICE_CLI" mail reply <message-id> --body "Got it."
+node "$OFFICE_CLI" mail reply-all <message-id> --body "Thanks everyone."
 ```
 
 ## Calendar
 
 ```bash
-bun "$OFFICE_CLI" cal today
-bun "$OFFICE_CLI" cal tomorrow
-bun "$OFFICE_CLI" cal events --days 14
-bun "$OFFICE_CLI" cal events --full
+node "$OFFICE_CLI" cal today
+node "$OFFICE_CLI" cal tomorrow
+node "$OFFICE_CLI" cal events --days 14
+node "$OFFICE_CLI" cal events --full
 ```
 
 ## People lookup (Graph contact helper)
 
 ```bash
-bun "$OFFICE_CLI" people "brad"
-bun "$OFFICE_CLI" people "brad" --verbose
+node "$OFFICE_CLI" people "brad"
+node "$OFFICE_CLI" people "brad" --verbose
 ```
 
 ## Notion command map
 
 ```bash
-$NOTION_CLI me
-$NOTION_CLI find-db "my database"
-$NOTION_CLI search "my database"
-$NOTION_CLI get-db <database-id>
-$NOTION_CLI query-db <database-id>
-$NOTION_CLI get-page <page-id>
-$NOTION_CLI get-markdown <page-id>
-$NOTION_CLI create <database-id> "Title" -p "Status=In progress" -p "Priority=High"
-$NOTION_CLI update <page-id> -p "Status=Done"
-$NOTION_CLI set-body <page-id> -
-$NOTION_CLI append-body <page-id> -
+node "$NOTION_CLI" login
+node "$NOTION_CLI" request
+node "$NOTION_CLI" status
+node "$NOTION_CLI" me
+node "$NOTION_CLI" find-db "my database"
+node "$NOTION_CLI" search "my database"
+node "$NOTION_CLI" get-db <database-id>
+node "$NOTION_CLI" query-db <database-id>
+node "$NOTION_CLI" get-page <page-id>
+node "$NOTION_CLI" get-markdown <page-id>
+node "$NOTION_CLI" create <database-id> "Title" -p "Status=In progress" -p "Priority=High"
+node "$NOTION_CLI" update <page-id> -p "Status=Done"
+node "$NOTION_CLI" set-body <page-id> -
+node "$NOTION_CLI" append-body <page-id> -
 ```
 
 Use `find-db` first when the database ID is unknown. It returns database `id`, `title`, and `url` so the ID can be copied directly into `get-db`, `query-db`, or `create`.
@@ -137,9 +140,9 @@ Use `find-db` first when the database ID is unknown. It returns database `id`, `
 # Optional: enable shortcuts for a specific Notion backlog database
 export NOTION_BACKLOG_DB_ID="<database-id>"
 
-$NOTION_CLI backlog
-$NOTION_CLI backlog "In Progress"
-$NOTION_CLI create-backlog "New task"
+node "$NOTION_CLI" backlog
+node "$NOTION_CLI" backlog "In Progress"
+node "$NOTION_CLI" create-backlog "New task"
 ```
 
 ## Multi-tool patterns
@@ -150,16 +153,18 @@ $NOTION_CLI create-backlog "New task"
 
 ## Error handling
 
-- `no_agent_session`: run `bun "$OFFICE_CLI" login`.
-- `no_grant`: run `bun "$OFFICE_CLI" request <drive|mail|cal>`.
-- `token expired`: run `bun "$OFFICE_CLI" status` and follow the returned re-authorisation URL.
-- `NOTION_API_KEY` missing: set variable and rerun the failing Notion command.
+- `no_agent_session`: run `node "$OFFICE_CLI" login`.
+- `no_grant`: run `node "$OFFICE_CLI" request <drive|mail|cal>`.
+- `token expired`: run `node "$OFFICE_CLI" status` and follow the returned re-authorisation URL.
+- `no agent session` (Notion): run `node "$NOTION_CLI" login`.
+- `no grant` (Notion): run `node "$NOTION_CLI" request`.
 - `NOTION_BACKLOG_DB_ID` missing: set variable or call generic `query-db`/`create` commands instead of backlog shortcuts.
 - Microsoft account not linked: follow the URL output by Graph proxy responses.
+- Notion account not linked: follow the Notion connect URL output by the CLI.
 
 ## Public publication checks
 
-- Keep `NOTION_API_KEY` and graph proxy URLs configurable by environment.
+- Keep proxy URL configurable by `AUTH_SERVICE_URL`.
 - Do not embed API keys or session IDs in skill outputs.
 - Keep all commands pointed at `https://auth.freshhub.ai` by default.
 - Include both CLIs under this skill's `scripts/` folder for self-contained installation.
