@@ -94,8 +94,21 @@ interface AuthRequestResponse {
 async function getAgentSession(): Promise<string | null> {
   try {
     if (!existsSync(AGENT_SESSION_FILE)) return null;
-    const session = await readFile(AGENT_SESSION_FILE, "utf-8");
-    return session.trim();
+    const sessionRaw = (await readFile(AGENT_SESSION_FILE, "utf-8")).trim();
+    if (!sessionRaw) return null;
+
+    try {
+      const parsed = JSON.parse(sessionRaw) as {
+        agentSessionId?: string;
+        agentSession?: string;
+        session?: string;
+      };
+      const normalized =
+        parsed.agentSessionId || parsed.agentSession || parsed.session;
+      return normalized?.trim() || null;
+    } catch {
+      return sessionRaw;
+    }
   } catch {
     return null;
   }
@@ -104,7 +117,9 @@ async function getAgentSession(): Promise<string | null> {
 async function saveAgentSession(agentSessionId: string): Promise<void> {
   const dir = dirname(AGENT_SESSION_FILE);
   await mkdir(dir, { recursive: true });
-  await writeFile(AGENT_SESSION_FILE, agentSessionId, { mode: 0o600 });
+  await writeFile(AGENT_SESSION_FILE, `${agentSessionId.trim()}\n`, {
+    mode: 0o600,
+  });
 }
 
 async function clearAgentSession(): Promise<void> {
