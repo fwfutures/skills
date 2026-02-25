@@ -43,12 +43,12 @@ const AUTH_SERVICE_URL = RAW_AUTH_SERVICE_URL.replace(/\/+$/, "").replace(
 );
 const NOTION_PROXY_BASE = `${AUTH_SERVICE_URL}/api/proxy/notion`;
 const NOTION_STATUS_URL = `${AUTH_SERVICE_URL}/api/proxy/status/notion`;
-const AGENT_SESSION_FILE = join(
-  homedir(),
-  ".config",
-  "office-cli",
-  "agent-session"
-);
+const SHARED_AGENT_SESSION_FILE =
+  process.env.FRESH_AUTH_AGENT_SESSION_FILE ||
+  join(homedir(), ".config", "fresh-auth", "agent-session");
+const LEGACY_AGENT_SESSION_FILES = [
+  join(homedir(), ".config", "office-cli", "agent-session"),
+];
 const AUTO_REQUEST_POLL_MS = 2000;
 const AUTO_REQUEST_ENABLED = process.env.OFFICE_AUTO_REQUEST !== "0";
 const NOTION_SCOPES = ["read", "write"];
@@ -76,33 +76,42 @@ function sleep(ms) {
 }
 
 function getAgentSession() {
+  const candidates = [SHARED_AGENT_SESSION_FILE, ...LEGACY_AGENT_SESSION_FILES];
   try {
-    if (!existsSync(AGENT_SESSION_FILE)) return null;
-    const sessionRaw = readFileSync(AGENT_SESSION_FILE, "utf8").trim();
-    if (!sessionRaw) return null;
+    for (const sessionFile of candidates) {
+      if (!existsSync(sessionFile)) continue;
+      const sessionRaw = readFileSync(sessionFile, "utf8").trim();
+      if (!sessionRaw) continue;
 
-    try {
-      const parsed = JSON.parse(sessionRaw);
-      const normalized =
-        parsed.agentSessionId || parsed.agentSession || parsed.session;
-      return normalized?.trim() || null;
-    } catch {
-      return sessionRaw;
+      try {
+        const parsed = JSON.parse(sessionRaw);
+        const normalized =
+          parsed.agentSessionId || parsed.agentSession || parsed.session;
+        if (normalized?.trim()) return normalized.trim();
+      } catch {
+        return sessionRaw;
+      }
     }
+    return null;
   } catch {
     return null;
   }
 }
 
 function saveAgentSession(agentSessionId) {
-  mkdirSync(dirname(AGENT_SESSION_FILE), { recursive: true });
-  writeFileSync(AGENT_SESSION_FILE, `${agentSessionId.trim()}\n`, { mode: 0o600 });
+  mkdirSync(dirname(SHARED_AGENT_SESSION_FILE), { recursive: true });
+  writeFileSync(SHARED_AGENT_SESSION_FILE, `${agentSessionId.trim()}\n`, { mode: 0o600 });
 }
 
 function clearAgentSession() {
   try {
-    if (existsSync(AGENT_SESSION_FILE)) {
-      unlinkSync(AGENT_SESSION_FILE);
+    for (const sessionFile of [
+      SHARED_AGENT_SESSION_FILE,
+      ...LEGACY_AGENT_SESSION_FILES,
+    ]) {
+      if (existsSync(sessionFile)) {
+        unlinkSync(sessionFile);
+      }
     }
   } catch {
     // Ignore clear failures
@@ -445,6 +454,10 @@ async function cmdLogin() {
   }
 
   const registration = await initResponse.json();
+  if (registration.agentSessionId?.trim()) {
+    saveAgentSession(registration.agentSessionId);
+    console.error("Session saved (pending approval).");
+  }
   const registrationId = registration.registrationId;
   const verifyUrl =
     registration.verifyUrl ||
@@ -465,8 +478,10 @@ async function cmdLogin() {
     }
 
     const status = await pollResponse.json();
-    if (status.status === "approved" && status.agentSessionId) {
+    if (status.agentSessionId?.trim()) {
       saveAgentSession(status.agentSessionId);
+    }
+    if (status.status === "approved" && status.agentSessionId) {
       console.error("Login successful.");
       return;
     }
