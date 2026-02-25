@@ -3,7 +3,7 @@
  * Notion CLI - Access Notion through auth service proxy (OAuth via auth.freshhub.ai)
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "fs";
 import { dirname, resolve, join } from "path";
 import { fileURLToPath } from "url";
 import { homedir, hostname } from "os";
@@ -78,8 +78,17 @@ function sleep(ms) {
 function getAgentSession() {
   try {
     if (!existsSync(AGENT_SESSION_FILE)) return null;
-    const session = readFileSync(AGENT_SESSION_FILE, "utf8").trim();
-    return session || null;
+    const sessionRaw = readFileSync(AGENT_SESSION_FILE, "utf8").trim();
+    if (!sessionRaw) return null;
+
+    try {
+      const parsed = JSON.parse(sessionRaw);
+      const normalized =
+        parsed.agentSessionId || parsed.agentSession || parsed.session;
+      return normalized?.trim() || null;
+    } catch {
+      return sessionRaw;
+    }
   } catch {
     return null;
   }
@@ -87,13 +96,13 @@ function getAgentSession() {
 
 function saveAgentSession(agentSessionId) {
   mkdirSync(dirname(AGENT_SESSION_FILE), { recursive: true });
-  writeFileSync(AGENT_SESSION_FILE, agentSessionId, { mode: 0o600 });
+  writeFileSync(AGENT_SESSION_FILE, `${agentSessionId.trim()}\n`, { mode: 0o600 });
 }
 
 function clearAgentSession() {
   try {
     if (existsSync(AGENT_SESSION_FILE)) {
-      writeFileSync(AGENT_SESSION_FILE, "");
+      unlinkSync(AGENT_SESSION_FILE);
     }
   } catch {
     // Ignore clear failures
