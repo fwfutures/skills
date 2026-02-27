@@ -20,7 +20,8 @@ Use this skill as the single entry point for secure, identity-aware access to Mi
 
 - Use the Auth Service Proxy at `https://auth.freshhub.ai` for Microsoft Graph and Notion actions.
 - Use agent-session grants and OAuth approvals, never raw provider tokens.
-- Keep `~/.config/office-cli/agent-session` at secure mode (600).
+- Keep `~/.config/fresh-auth/agent-session` at secure mode (600).
+- Legacy `~/.config/office-cli/agent-session` is still read for compatibility.
 - Store secrets in environment variables.
 - Use `OPENROUTER_API_KEY` for Office PDF/image conversion.
 - Use `AUTH_SERVICE_URL` only when overriding the default proxy endpoint.

@@ -11,14 +11,38 @@ const AUTH_SERVICE_URL = RAW_AUTH_SERVICE_URL.replace(/\/+$/, "").replace(
 );
 const API_BASE = `${AUTH_SERVICE_URL}/proxy/msgraph`;
 const STATUS_BASE = `${AUTH_SERVICE_URL}/api/proxy/status`;
-const SHARED_AGENT_SESSION_FILE = process.env.FRESH_AUTH_AGENT_SESSION_FILE || join(
-  homedir(),
-  ".config",
-  "fresh-auth",
-  "agent-session"
-);
-const LEGACY_AGENT_SESSION_FILES = [
-  join(homedir(), ".config", "office-cli", "agent-session")
+const DEFAULT_CONFIG_HOME = join(homedir(), ".config");
+function normalizeSessionFile(value) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (trimmed === "~") return homedir();
+  if (trimmed.startsWith("~/")) return join(homedir(), trimmed.slice(2));
+  return trimmed;
+}
+function uniqueSessionFiles(values) {
+  const unique = /* @__PURE__ */ new Set();
+  for (const value of values) {
+    if (!value) continue;
+    unique.add(value);
+  }
+  return [...unique];
+}
+const XDG_CONFIG_HOME = normalizeSessionFile(process.env.XDG_CONFIG_HOME);
+const CONFIG_HOME_CANDIDATES = uniqueSessionFiles([
+  XDG_CONFIG_HOME,
+  DEFAULT_CONFIG_HOME
+]);
+const SHARED_AGENT_SESSION_FILE = normalizeSessionFile(process.env.FRESH_AUTH_AGENT_SESSION_FILE) || join(CONFIG_HOME_CANDIDATES[0], "fresh-auth", "agent-session");
+const LEGACY_AGENT_SESSION_FILES = uniqueSessionFiles([
+  normalizeSessionFile(process.env.OFFICE_CLI_AGENT_SESSION_FILE),
+  normalizeSessionFile(process.env.AGENT_SESSION_FILE),
+  ...CONFIG_HOME_CANDIDATES.map((configHome) => join(configHome, "office-cli", "agent-session")),
+  ...CONFIG_HOME_CANDIDATES.map((configHome) => join(configHome, "cal-cli", "agent-session")),
+  ...CONFIG_HOME_CANDIDATES.map((configHome) => join(configHome, "onedrive-cli", "agent-session"))
+]).filter((sessionFile) => sessionFile !== SHARED_AGENT_SESSION_FILE);
+const AGENT_SESSION_FILES = [
+  SHARED_AGENT_SESSION_FILE,
+  ...LEGACY_AGENT_SESSION_FILES
 ];
 const AUTO_REQUEST_POLL_MS = 2e3;
 const AUTO_REQUEST_ENABLED = process.env.OFFICE_AUTO_REQUEST !== "0";
@@ -33,9 +57,8 @@ const GRANT_DURATION = {
   cal: "1h"
 };
 async function getAgentSession() {
-  const candidates = [SHARED_AGENT_SESSION_FILE, ...LEGACY_AGENT_SESSION_FILES];
   try {
-    for (const sessionFile of candidates) {
+    for (const sessionFile of AGENT_SESSION_FILES) {
       if (!existsSync(sessionFile)) continue;
       const sessionRaw = (await readFile(sessionFile, "utf-8")).trim();
       if (!sessionRaw) continue;
@@ -59,7 +82,7 @@ async function saveAgentSession(agentSessionId) {
 }
 async function clearAgentSession() {
   try {
-    for (const sessionFile of [SHARED_AGENT_SESSION_FILE, ...LEGACY_AGENT_SESSION_FILES]) {
+    for (const sessionFile of AGENT_SESSION_FILES) {
       if (existsSync(sessionFile)) {
         await unlink(sessionFile);
       }
@@ -1281,7 +1304,12 @@ async function checkStatus(service) {
   const session = await getAgentSession();
   console.log("Office CLI Status\n");
   console.log(`Auth Service: ${AUTH_SERVICE_URL}`);
-  console.log(`Agent session file: ${AGENT_SESSION_FILE}`);
+  console.log(`Primary session file: ${SHARED_AGENT_SESSION_FILE}`);
+  if (LEGACY_AGENT_SESSION_FILES.length > 0) {
+    console.log(
+      `Fallback session files: ${LEGACY_AGENT_SESSION_FILES.join(", ")}`
+    );
+  }
   console.log(`Agent session saved: ${session ? "Yes" : "No"}`);
   if (!session) {
     console.log("\n\u274C Not registered");
