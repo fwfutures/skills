@@ -4,6 +4,16 @@ Public agent skills for Claude Code and Codex.
 
 ## Install
 
+### Local development
+
+Use the repo installer so skills are symlinked from your checkout and stay editable in place:
+
+```bash
+./scripts/install-skills.sh
+```
+
+### Published package
+
 ```bash
 npx skills add fwfutures/skills -g
 ```
