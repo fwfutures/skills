@@ -22,8 +22,12 @@ npx skills add fwfutures/skills -g
 
 | Skill | Description |
 |-------|-------------|
+| gcp-deploy | Deploys containerised applications to Google Cloud Run from source |
 | hello-world | Tells the user a joke to brighten their day |
-| fresh-auth | Unified secure access to Office, email, calendar, Microsoft Graph, and Notion via auth.freshhub.ai |
+| hermes-tweet | Installs and operates Hermes Tweet for X/Twitter reads and approved actions |
+| skill-development | Guides Claude Code plugin skill creation and validation |
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.
 
 ## License
 
