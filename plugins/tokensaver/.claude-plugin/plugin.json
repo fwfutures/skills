@@ -1,1 +1,13 @@
-{"name":"tokensaver","version":"0.1.0","description":"TokenSaver blocks large stale conversation turns and prepares bounded local handoffs.","author":{"name":"Freshwater Futures"}}
+{
+  "name": "tokensaver",
+  "version": "0.1.0",
+  "description": "Avoid reprocessing large stale conversations with local checks and bounded handoffs. Built by Freshwater Futures.",
+  "author": {
+    "name": "Freshwater Futures",
+    "url": "https://freshwaterfutures.com"
+  },
+  "homepage": "https://freshwaterfutures.com",
+  "repository": "https://github.com/fwfutures/skills",
+  "license": "MIT",
+  "keywords": ["tokens", "context", "cache", "cost-saving", "handoff"]
+}

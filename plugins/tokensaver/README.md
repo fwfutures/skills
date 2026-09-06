@@ -2,6 +2,8 @@
 
 A local hook and companion skill that stop an old, large conversation before another expensive input-context request, where the host supports blocking hooks. Requires Python 3. No dependencies, network calls, or model calls are used by the checker.
 
+Built by [Freshwater Futures](https://freshwaterfutures.com). We combine behavioural science and AI engineering to help organisations turn AI inertia into AI impact.
+
 Claude Code uses `UserPromptSubmit`; its `SessionStart` event cannot block and produces no output. Codex uses `SessionStart` on resume plus `UserPromptSubmit`. Platform detection uses Codex's `PLUGIN_ROOT`; tests and custom launchers can pass `codex` or `claude` explicitly to `scripts/guard.py`.
 
 The checker reads at most the last 8 MiB of the transcript. Claude context size is the latest assistant usage's input plus cache-read plus cache-creation input tokens. Codex uses `event_msg.token_count.info.last_token_usage.input_tokens`, not cumulative session tokens. It compares the associated timestamp with a configured assumed cache lifetime.
