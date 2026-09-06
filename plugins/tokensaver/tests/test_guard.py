@@ -14,7 +14,7 @@ NOW = datetime(2026, 9, 6, 12, tzinfo=timezone.utc)
 
 
 class GuardTests(unittest.TestCase):
-    def check(self, platform, tokens=50000, at='2026-09-06T10:00:00Z', hook='UserPromptSubmit'):
+    def check(self, platform, tokens=50000, at='2026-09-06T10:00:00Z', hook='UserPromptSubmit', use_defaults=False):
         if platform == 'claude':
             row = {'type': 'assistant', 'timestamp': at, 'message': {'usage': {
                 'input_tokens': 1000, 'cache_read_input_tokens': tokens - 1000},
@@ -26,9 +26,10 @@ class GuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'session.jsonl'
             path.write_text('malformed\n[]\n' + json.dumps(row) + '\n')
-            with patch.dict(os.environ, {'TOKENSAVER_CLAUDE_TTL_SECONDS': '3600',
-                                        'TOKENSAVER_CODEX_TTL_SECONDS': '3600',
-                                        'TOKENSAVER_THRESHOLD_TOKENS': '50000'}):
+            with patch.dict(os.environ, {} if use_defaults else {
+                    'TOKENSAVER_CLAUDE_TTL_SECONDS': '3600',
+                    'TOKENSAVER_CODEX_TTL_SECONDS': '3600',
+                    'TOKENSAVER_THRESHOLD_TOKENS': '50000'}, clear=True):
                 return guard.evaluate({'hook_event_name': hook, 'source': 'resume',
                                        'transcript_path': str(path)}, platform, NOW)
 
@@ -40,6 +41,20 @@ class GuardTests(unittest.TestCase):
         for platform in ('claude', 'codex'):
             self.assertIsNone(self.check(platform, 49999))
             self.assertIsNone(self.check(platform, at='2026-09-06T11:59:00Z'))
+
+    def test_subscription_main_thread_default_boundaries(self):
+        self.assertIsNone(self.check('codex', at='2026-09-06T11:40:00Z', use_defaults=True))
+        for platform, boundary, expired in (
+                ('codex', '2026-09-06T11:30:00Z', '2026-09-06T11:29:59Z'),
+                ('claude', '2026-09-06T11:00:00Z', '2026-09-06T10:59:59Z')):
+            with self.subTest(platform=platform):
+                self.assertIsNone(self.check(platform, at=boundary, use_defaults=True))
+                self.assertIsNotNone(self.check(platform, at=expired, use_defaults=True))
+                self.assertIsNone(self.check(platform, tokens=49999, at=expired, use_defaults=True))
+
+    def test_ttl_override_is_respected(self):
+        self.assertIsNone(self.check('codex', at='2026-09-06T11:20:00Z'))
+        self.assertIsNotNone(self.check('codex', at='2026-09-06T11:20:00Z', use_defaults=True))
 
     def test_session_start_platform_behavior(self):
         self.assertIsNone(self.check('claude', hook='SessionStart'))

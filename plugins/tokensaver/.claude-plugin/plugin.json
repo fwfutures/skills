@@ -1,7 +1,7 @@
 {
   "name": "tokensaver",
-  "version": "0.1.0",
-  "description": "Avoid reprocessing large stale conversations with local checks and bounded handoffs. Built by Freshwater Futures.",
+  "version": "0.1.1",
+  "description": "Avoid costly returns to large subscription main threads with local cache-age checks and bounded handoffs. Built by Freshwater Futures.",
   "author": {
     "name": "Freshwater Futures",
     "url": "https://freshwaterfutures.com"
@@ -9,5 +9,11 @@
   "homepage": "https://freshwaterfutures.com",
   "repository": "https://github.com/fwfutures/skills",
   "license": "MIT",
-  "keywords": ["tokens", "context", "cache", "cost-saving", "handoff"]
+  "keywords": [
+    "tokens",
+    "context",
+    "cache",
+    "cost-saving",
+    "handoff"
+  ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "tokensaver",
-  "version": "0.1.0+codex.20260906030341",
-  "description": "Avoid reprocessing large stale conversations with local checks and bounded handoffs. Built by Freshwater Futures.",
+  "version": "0.1.1+codex.20260906031404",
+  "description": "Avoid costly returns to large subscription main threads with local cache-age checks and bounded handoffs. Built by Freshwater Futures.",
   "author": {
     "name": "Freshwater Futures",
     "url": "https://freshwaterfutures.com"
@@ -19,8 +19,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "TokenSaver",
-    "shortDescription": "Avoid reprocessing large stale conversations.",
-    "longDescription": "TokenSaver checks conversation size and age before model processing and saves a bounded local handoff when a large, stale turn is blocked. Checks run locally without network or model calls. Cache expiry is estimated; starting a fresh session is manual. Built by Freshwater Futures, combining behavioural science and AI engineering to help organisations turn AI inertia into AI impact.",
+    "shortDescription": "Guard against costly returns to large main threads.",
+    "longDescription": "TokenSaver guards against accidentally resuming large subscription main conversations after a long break. Defaults assume 60 minutes for Claude Code within included subscription usage and 30 minutes for Codex with GPT-5.6 or later. Cache age is estimated, not confirmed expiry. Checks run locally without network or model calls and save a bounded handoff for a manually opened fresh session. Built by Freshwater Futures, combining behavioural science and AI engineering to help organisations turn AI inertia into AI impact.",
     "developerName": "Freshwater Futures",
     "websiteURL": "https://freshwaterfutures.com",
     "category": "Productivity",

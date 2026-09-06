@@ -91,7 +91,7 @@ def evaluate(event, platform, now=None):
         return None
     tokens, last, recent = read_transcript(path, platform)
     threshold = float(os.environ.get('TOKENSAVER_THRESHOLD_TOKENS', '50000'))
-    ttl = float(os.environ.get('TOKENSAVER_' + platform.upper() + '_TTL_SECONDS', '3600' if platform == 'claude' else '900'))
+    ttl = float(os.environ.get('TOKENSAVER_' + platform.upper() + '_TTL_SECONDS', '3600' if platform == 'claude' else '1800'))
     if threshold <= 0 or ttl <= 0 or not last:
         return None
     age = ((now or datetime.now(timezone.utc)) - last).total_seconds()
@@ -125,7 +125,7 @@ def main():
         if data:
             handoff = save_handoff(event, data)
             reason = (f'TokenSaver: blocked large context ({data["tokens"]:,.0f} input tokens) '
-                      f'older than the configured cache lifetime. Start a fresh session and read {handoff}. '
+                      f'past the configured cache-age estimate. Start a fresh session and read {handoff}. '
                       'The original session is preserved. Cache expiry is estimated, not confirmed.')
             print(json.dumps({'continue': False, 'stopReason': reason, 'systemMessage': reason} if platform == 'codex'
                              else {'decision': 'block', 'reason': reason}))

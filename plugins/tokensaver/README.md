@@ -12,9 +12,18 @@ The checker reads at most the last 8 MiB of the transcript. Claude context size 
 | --- | --- |
 | `TOKENSAVER_THRESHOLD_TOKENS` | `50000` |
 | `TOKENSAVER_CLAUDE_TTL_SECONDS` | `3600` |
-| `TOKENSAVER_CODEX_TTL_SECONDS` | `900` |
+| `TOKENSAVER_CODEX_TTL_SECONDS` | `1800` |
 
-These lifetimes are configurable heuristics, not guaranteed cache-retention policies. Set the Claude lifetime to match your plan/provider (for example `300` for a five-minute policy). There is no reliable cache-expiry timestamp inferred from a transcript alone. The trigger requires size at or above threshold and age strictly greater than the configured lifetime.
+## Intended use and timing assumptions
+
+TokenSaver is intended for **subscription usage in the main conversation**: a reminder to start fresh instead of accidentally submitting a prompt to a very large thread after a long break. Defaults assume Claude Code is within its subscription's included usage and Codex uses GPT-5.6 or later. They are not tuned for API billing, usage-credit overages, third-party providers, subagents, or background requests. These are usage assumptions, not automatically detected restrictions.
+
+- **Claude: 60 minutes.** Claude Code requests a one-hour TTL for the main conversation within included subscription usage. API keys, usage credits and most subagent requests default to five minutes. See [Claude Code cache lifetime](https://code.claude.com/docs/en/prompt-caching#cache-lifetime) and [Anthropic prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching).
+- **Codex: 30 minutes.** OpenAI documents a 30-minute minimum cache lifetime for GPT-5.6 and later, refreshed on write or reuse. We use the end of that minimum window as a practical point to guard against a costly return; entries can remain cached longer. This is not a separate guarantee for every Codex subscription backend. See [OpenAI cache lifetime](https://developers.openai.com/api/docs/guides/prompt-caching#cache-lifetime) and [OpenAI's GPT-5.6 builder's guide](https://openai.com/index/builders-guide-to-gpt-5-6/).
+
+These defaults are configurable estimates, not confirmed expiry times. The checker uses the latest usage-record timestamp as a proxy for cache activity. Anthropic measures TTL from request start, so response generation and transcript recording can make our trigger late. Prefix changes can cause misses earlier, and retention or reuse elsewhere can keep prefixes warm longer. The checker does not query live cache state or detect authentication, billing mode, model, or effective provider TTL.
+
+The trigger requires size at or above 50,000 input tokens and age strictly greater than the configured lifetime. Override the environment variables for other usage patterns (for example `TOKENSAVER_CLAUDE_TTL_SECONDS=300` for a five-minute policy).
 
 On a block, TokenSaver creates a private temporary directory (0700) containing a per-session handoff file (0600), outside the repository. It includes at most six recent user/assistant text entries (4,000 characters each) and 4,000 characters of the pending prompt. Start a fresh session and ask it to read that file. Original sessions are preserved. Automatic session creation is not implemented. Temporary handoffs may contain sensitive conversation text; delete them when no longer needed.
 
