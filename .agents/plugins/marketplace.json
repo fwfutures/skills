@@ -1,0 +1,20 @@
+{
+  "name": "fwf-public-marketplace",
+  "interface": {
+    "displayName": "Fwf Public Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "tokensaver",
+      "source": {
+        "source": "local",
+        "path": "./plugins/tokensaver"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

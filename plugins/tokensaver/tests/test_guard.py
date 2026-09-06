@@ -1,0 +1,67 @@
+import importlib.util
+import json
+import os
+import tempfile
+import unittest
+from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+spec = importlib.util.spec_from_file_location('guard', Path(__file__).parents[1] / 'scripts/guard.py')
+guard = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(guard)
+NOW = datetime(2026, 9, 6, 12, tzinfo=timezone.utc)
+
+
+class GuardTests(unittest.TestCase):
+    def check(self, platform, tokens=50000, at='2026-09-06T10:00:00Z', hook='UserPromptSubmit'):
+        if platform == 'claude':
+            row = {'type': 'assistant', 'timestamp': at, 'message': {'usage': {
+                'input_tokens': 1000, 'cache_read_input_tokens': tokens - 1000},
+                'content': [{'type': 'text', 'text': 'Task state'}]}}
+        else:
+            row = {'type': 'event_msg', 'timestamp': at, 'payload': {'type': 'token_count',
+                   'info': {'last_token_usage': {'input_tokens': tokens, 'cached_input_tokens': tokens},
+                            'total_token_usage': {'input_tokens': 999999}}}}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'session.jsonl'
+            path.write_text('malformed\n[]\n' + json.dumps(row) + '\n')
+            with patch.dict(os.environ, {'TOKENSAVER_CLAUDE_TTL_SECONDS': '3600',
+                                        'TOKENSAVER_CODEX_TTL_SECONDS': '3600',
+                                        'TOKENSAVER_THRESHOLD_TOKENS': '50000'}):
+                return guard.evaluate({'hook_event_name': hook, 'source': 'resume',
+                                       'transcript_path': str(path)}, platform, NOW)
+
+    def test_stale_threshold_both_platforms(self):
+        for platform in ('claude', 'codex'):
+            self.assertEqual(self.check(platform)['tokens'], 50000)
+
+    def test_small_and_fresh_allowed(self):
+        for platform in ('claude', 'codex'):
+            self.assertIsNone(self.check(platform, 49999))
+            self.assertIsNone(self.check(platform, at='2026-09-06T11:59:00Z'))
+
+    def test_session_start_platform_behavior(self):
+        self.assertIsNone(self.check('claude', hook='SessionStart'))
+        self.assertIsNotNone(self.check('codex', hook='SessionStart'))
+
+    def test_unknown_timestamp_allowed(self):
+        self.assertIsNone(self.check('codex', at='invalid'))
+
+    def test_missing_path_allowed(self):
+        self.assertIsNone(guard.evaluate({'hook_event_name': 'UserPromptSubmit'}, 'claude'))
+
+    def test_private_bounded_handoff(self):
+        data = self.check('claude')
+        path = guard.save_handoff({'session_id': '../../escape'}, data)
+        try:
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(path.parent.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(json.loads(path.read_text())['recent_exchanges'][0]['text'], 'Task state')
+        finally:
+            path.unlink()
+            path.parent.rmdir()
+
+
+if __name__ == '__main__':
+    unittest.main()

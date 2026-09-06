@@ -18,6 +18,19 @@ Use the repo installer so skills are symlinked from your checkout and stay edita
 npx skills add fwfutures/skills -g
 ```
 
+## TokenSaver
+
+[TokenSaver](plugins/tokensaver/README.md) is a Claude Code and Codex plugin that blocks large stale conversation turns and saves a bounded local handoff. Install the plugin (skill-only installation does not enable its hooks).
+
+Claude Code:
+
+```text
+/plugin marketplace add fwfutures/skills
+/plugin install tokensaver@fwf-public-marketplace
+```
+
+Codex: add `fwfutures/skills` as a plugin marketplace, install `tokensaver`, and review/trust its hooks. See the plugin README for configuration and test coverage.
+
 ## Skills
 
 | Skill | Description |

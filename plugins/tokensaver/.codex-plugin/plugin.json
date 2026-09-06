@@ -1,0 +1,18 @@
+{
+  "name": "tokensaver",
+  "version": "0.1.0",
+  "description": "TokenSaver blocks large stale conversation turns and prepares bounded local handoffs.",
+  "author": {
+    "name": "Freshwater Futures"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "TokenSaver",
+    "shortDescription": "Avoid reprocessing large stale conversations.",
+    "longDescription": "TokenSaver checks conversation size and age before model processing and prepares a bounded local handoff when blocked.",
+    "developerName": "Freshwater Futures",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Help me configure TokenSaver."
+  }
+}
