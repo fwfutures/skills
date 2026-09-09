@@ -11,6 +11,7 @@ from pathlib import Path
 
 MAX_TRANSCRIPT_BYTES = 8 * 1024 * 1024
 MAX_EVENT_BYTES = 1024 * 1024
+OVERRIDE_PROMPT = 'continue'
 
 
 def number(value):
@@ -86,6 +87,8 @@ def evaluate(event, platform, now=None):
         return None
     if hook == 'SessionStart' and (platform == 'claude' or event.get('source') != 'resume'):
         return None
+    if str(event.get('prompt', '')).strip().lower() == OVERRIDE_PROMPT:
+        return None
     path = event.get('transcript_path')
     if not isinstance(path, str) or not path:
         return None
@@ -126,7 +129,8 @@ def main():
             handoff = save_handoff(event, data)
             reason = (f'TokenSaver: blocked large context ({data["tokens"]:,.0f} input tokens) '
                       f'past the configured cache-age estimate. Start a fresh session and read {handoff}. '
-                      'The original session is preserved. Cache expiry is estimated, not confirmed.')
+                      'The original session is preserved. Cache expiry is estimated, not confirmed. '
+                      f'To use this session anyway, send "{OVERRIDE_PROMPT}".')
             print(json.dumps({'continue': False, 'stopReason': reason, 'systemMessage': reason} if platform == 'codex'
                              else {'decision': 'block', 'reason': reason}))
     except (OSError, ValueError, TypeError, OverflowError):

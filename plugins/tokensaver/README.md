@@ -23,6 +23,8 @@ TokenSaver is intended for **subscription usage in the main conversation**: a re
 
 These defaults are configurable estimates, not confirmed expiry times. The checker uses the latest usage-record timestamp as a proxy for cache activity. Anthropic measures TTL from request start, so response generation and transcript recording can make our trigger late. Prefix changes can cause misses earlier, and retention or reuse elsewhere can keep prefixes warm longer. The checker does not query live cache state or detect authentication, billing mode, model, or effective provider TTL.
 
+A prompt of exactly `continue` (case-insensitive, surrounding whitespace ignored) skips the check for that turn, so a block can be overridden without leaving the session. Longer prompts beginning with the word are not treated as an override.
+
 The trigger requires size at or above 50,000 input tokens and age strictly greater than the configured lifetime. Override the environment variables for other usage patterns (for example `TOKENSAVER_CLAUDE_TTL_SECONDS=300` for a five-minute policy).
 
 On a block, TokenSaver creates a private temporary directory (0700) containing a per-session handoff file (0600), outside the repository. It includes at most six recent user/assistant text entries (4,000 characters each) and 4,000 characters of the pending prompt. Start a fresh session and ask it to read that file. Original sessions are preserved. Automatic session creation is not implemented. Temporary handoffs may contain sensitive conversation text; delete them when no longer needed.

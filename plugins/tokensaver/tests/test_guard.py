@@ -14,7 +14,8 @@ NOW = datetime(2026, 9, 6, 12, tzinfo=timezone.utc)
 
 
 class GuardTests(unittest.TestCase):
-    def check(self, platform, tokens=50000, at='2026-09-06T10:00:00Z', hook='UserPromptSubmit', use_defaults=False):
+    def check(self, platform, tokens=50000, at='2026-09-06T10:00:00Z', hook='UserPromptSubmit', use_defaults=False,
+              prompt=''):
         if platform == 'claude':
             row = {'type': 'assistant', 'timestamp': at, 'message': {'usage': {
                 'input_tokens': 1000, 'cache_read_input_tokens': tokens - 1000},
@@ -30,12 +31,17 @@ class GuardTests(unittest.TestCase):
                     'TOKENSAVER_CLAUDE_TTL_SECONDS': '3600',
                     'TOKENSAVER_CODEX_TTL_SECONDS': '3600',
                     'TOKENSAVER_THRESHOLD_TOKENS': '50000'}, clear=True):
-                return guard.evaluate({'hook_event_name': hook, 'source': 'resume',
+                return guard.evaluate({'hook_event_name': hook, 'source': 'resume', 'prompt': prompt,
                                        'transcript_path': str(path)}, platform, NOW)
 
     def test_stale_threshold_both_platforms(self):
         for platform in ('claude', 'codex'):
             self.assertEqual(self.check(platform)['tokens'], 50000)
+
+    def test_continue_prompt_overrides_block(self):
+        for platform in ('claude', 'codex'):
+            self.assertIsNone(self.check(platform, prompt='  Continue  '))
+            self.assertIsNotNone(self.check(platform, prompt='continue the refactor'))
 
     def test_small_and_fresh_allowed(self):
         for platform in ('claude', 'codex'):
