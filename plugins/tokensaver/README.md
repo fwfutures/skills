@@ -23,7 +23,7 @@ TokenSaver is intended for **subscription usage in the main conversation**: a re
 
 These defaults are configurable estimates, not confirmed expiry times. The checker uses the latest usage-record timestamp as a proxy for cache activity. Anthropic measures TTL from request start, so response generation and transcript recording can make our trigger late. Prefix changes can cause misses earlier, and retention or reuse elsewhere can keep prefixes warm longer. The checker does not query live cache state or detect authentication, billing mode, model, or effective provider TTL.
 
-A prompt of exactly `continue` (case-insensitive, surrounding whitespace ignored) skips the check for that turn, so a block can be overridden without leaving the session. Longer prompts beginning with the word are not treated as an override.
+A prompt of exactly `continue` (case-insensitive, surrounding whitespace ignored) skips the check for that turn, so a block can be overridden without leaving the session. Longer prompts beginning with the word are not treated as an override. A block discards the prompt before the model sees it, so TokenSaver also writes it to `~/.cache/tokensaver/<session digest>-pending.json` (directory 0700, file 0600) and, on `continue`, returns it as `UserPromptSubmit` additional context and deletes the file. Context restoration follows the Claude Code hook contract; on Codex the same text is sent as a system message.
 
 The trigger requires size at or above 50,000 input tokens and age strictly greater than the configured lifetime. Override the environment variables for other usage patterns (for example `TOKENSAVER_CLAUDE_TTL_SECONDS=300` for a five-minute policy).
 

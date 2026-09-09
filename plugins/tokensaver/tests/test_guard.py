@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 import os
 import tempfile
@@ -42,6 +43,22 @@ class GuardTests(unittest.TestCase):
         for platform in ('claude', 'codex'):
             self.assertIsNone(self.check(platform, prompt='  Continue  '))
             self.assertIsNotNone(self.check(platform, prompt='continue the refactor'))
+
+    def test_continue_replays_the_blocked_prompt(self):
+        event = {'hook_event_name': 'UserPromptSubmit', 'session_id': 's1', 'prompt': 'refactor the parser'}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(guard, 'STATE_DIR', Path(directory) / 'state'):
+                pending = guard.save_pending(event, event['prompt'], 'handoff.json')
+                self.assertEqual(pending.stat().st_mode & 0o777, 0o600)
+                with patch('sys.stdout', new=io.StringIO()) as out:
+                    guard.resume({**event, 'prompt': 'continue'}, 'claude')
+                emitted = json.loads(out.getvalue())['hookSpecificOutput']
+                self.assertEqual(emitted['hookEventName'], 'UserPromptSubmit')
+                self.assertIn('refactor the parser', emitted['additionalContext'])
+                self.assertFalse(pending.exists())
+                with patch('sys.stdout', new=io.StringIO()) as out:
+                    guard.resume({**event, 'prompt': 'continue'}, 'claude')
+                self.assertEqual(out.getvalue(), '')
 
     def test_small_and_fresh_allowed(self):
         for platform in ('claude', 'codex'):

@@ -1,6 +1,6 @@
 {
   "name": "tokensaver",
-  "version": "0.1.2+codex.20260909000000",
+  "version": "0.1.3+codex.20260909120000",
   "description": "Avoid costly returns to large subscription main threads with local cache-age checks and bounded handoffs. Built by Freshwater Futures.",
   "author": {
     "name": "Freshwater Futures",
